@@ -1,0 +1,21 @@
+# Java
+.classpath
+.jar
+.war
+.ear
+
+# Packages Files
+*.zip
+*.tar.gz
+*.rar
+
+# Maven
+target/
+
+# IDE
+.metadata
+.settings
+.project
+.factorypath
+bin/
+tmp/
