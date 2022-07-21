@@ -62,12 +62,12 @@ public class ApiTest {
 	public void getReporteTest() throws Exception {
 
 		DomicilioPeticion domicilioPeticion = new DomicilioPeticion();
-		domicilioPeticion.setCiudad("INSURGENTES SUR 1007");
-		domicilioPeticion.setDelegacionMunicipio(" MIGUEL HIDALGO");
-		domicilioPeticion.setCiudad("MEXICO");
+		domicilioPeticion.setCiudad("");
+		domicilioPeticion.setDelegacionMunicipio("");
+		domicilioPeticion.setCiudad("");
 		domicilioPeticion.setEstado(CatalogoEstados.DF);
-		domicilioPeticion.setCodigoPostal("11230");
-		domicilioPeticion.setNumeroTelefono("5517207788");
+		domicilioPeticion.setCodigoPostal("");
+		domicilioPeticion.setNumeroTelefono("");
 
 		List<DomicilioPeticion> domicilioPeticionList = new ArrayList<DomicilioPeticion>();
 		domicilioPeticionList.add(domicilioPeticion);
@@ -76,13 +76,13 @@ public class ApiTest {
 		domicilios.setList(domicilioPeticionList);
 
 		PersonasPeticion personasPeticion = new PersonasPeticion();
-		personasPeticion.setNombres("JUAN");
-		personasPeticion.setApellidoPaterno("PRUEBA");
-		personasPeticion.setApellidoMaterno("SIETE");
-		personasPeticion.setFechaNacimiento("1980-01-07");
-		personasPeticion.setRFC("PUSJ800107");
-		personasPeticion.setCURP("SAZR010101HCMLNS09");
-		personasPeticion.setClaveElectorIFE("000000000000");
+		personasPeticion.setNombres("");
+		personasPeticion.setApellidoPaterno("");
+		personasPeticion.setApellidoMaterno("");
+		personasPeticion.setFechaNacimiento("");
+		personasPeticion.setRFC("");
+		personasPeticion.setCURP("");
+		personasPeticion.setClaveElectorIFE("");
 		personasPeticion.setSexo(CatalogoSexo.M);
 		personasPeticion.setDomicilios(domicilios);
 
@@ -90,11 +90,11 @@ public class ApiTest {
 		personasPeticionList.add(personasPeticion);
 
 		Personas personas = new Personas();
-		personas.setFolio("1234");
+		personas.setFolio("");
 		personas.setList(personasPeticionList);
 
 		PersonaPeticion personaPeticion = new PersonaPeticion();
-		personaPeticion.setFolioOtorgante("1001");
+		personaPeticion.setFolioOtorgante("");
 		personaPeticion.setPersonas(personas);
 
 		Respuesta respuesta = api.getReporte(xApiKey, username, password, personaPeticion);

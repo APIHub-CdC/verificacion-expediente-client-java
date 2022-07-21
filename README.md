@@ -2,110 +2,212 @@
 
 Verificación de Expediente.<br/><img src='https://github.com/APIHub-CdC/imagenes-cdc/blob/master/circulo_de_credito-apihub.png' height='37' width='160'/></p><br/>
 
-## Requirements
+## Requerimientos
 
- 1. Java 8 or higher
- 2. Maven 3 or higher
+ 1. Java >= 8 
+ 2. Maven >= 3 
 
-## Usage
+## Instalación
 
-The next command can be used to execute the client:
+**Prerrequisito**: obtener token de acceso y configuración de las credenciales de acceso. Consulte el manual **[aquí](https://github.com/APIHub-CdC/maven-github-packages)**.
+
+**Opción 1**: En caso que la configuración se integró en el archivo **settingsAPIHUB.xml** (ubicado en la raíz del proyecto), instale las dependencias con siguiente comando:
+
 ```shell
-mvn compile exec:java
+mvn --settings settingsAPIHUB.xml clean install -Dmaven.test.skip=true
 ```
 
-
-## Step by step
-
-> **If you already use the *Círculo de Crédito* APIs and have previously**
-> **registered your certificate (public key), skip steps 1 to 3.**
-
-1. You need to get your *Círculo de Crédito* access credentials i.e. **username**, **password** and **api-key**. ([For more information consult the official documentation](https://developer.circulodecredito.com.mx/guia-de-inicio)).
-
-2. Generate a public-private cryptographic key pair using the ECC (Elliptic Curve Cryptography) with the **secp384r1** specification. (The cryptographic key pair is used for the digital signature of the request and response payloads in each HTTP call made to the *Círculo de Crédito* APIs.)
-
-After executing the below commands, two files are generated, one
-containing the **private key** (**private-key.pem**) and the other containing the certificate with the **public key** (**certificate.pem**).
-> 
-> You can change the name of the private key and the certificate files to a
-> custom one, just remember that the private key must be the same when
-> generating the certificate.
+**Opción 2**: Si se integró la configuración en el **settings.xml** del **.m2**, instale las dependencias con siguiente comando:
 
 ```shell
-# Generate private key
-openssl ecparam -name secp384r1 -genkey -out private-key.pem
+mvn install -Dmaven.test.skip=true
 ```
+
+## Guía de inicio
+
+### Paso 1. Generar llave y certificado
+Antes de lanzar la prueba se deberá tener un keystore para la llave privada y el certificado asociado a ésta.
+Para generar el keystore se ejecutan las instrucciones que se encuentran en ***src/main/security/createKeystore.sh*** ó con los siguientes comandos:
+
+**Opcional**: Si desea cifrar su contenedor, coloque una contraseña en una variable de ambiente.
+
 ```shell
-# Generate certificate with public key
+export KEY_PASSWORD=your_super_secure_password
+```
+
+**Opcional**: Si desea cifrar su keystore, coloque una contraseña en una variable de ambiente.
+
+```shell
+export KEYSTORE_PASSWORD=your_super_secure_keystore_password
+```
+
+- Definición de los nombres de archivos y alias.
+
+```shell
+export PRIVATE_KEY_FILE=pri_key.pem
+export CERTIFICATE_FILE=certificate.pem
+export SUBJECT=/C=MX/ST=MX/L=MX/O=CDC/CN=CDC
+export PKCS12_FILE=keypair.p12
+export KEYSTORE_FILE=keystore.jks
+export ALIAS=cdc
+```
+- Generar llave y certificado.
+
+```shell
+# Genera la llave privada.
+openssl ecparam -name secp384r1 -genkey -out ${PRIVATE_KEY_FILE}
+
+# Genera el certificado público
 openssl req -new -x509 -days 365 \
--key private-key.pem \
--out certificate.pem \
--subj "cdc"
+  -key ${PRIVATE_KEY_FILE} \
+  -out ${CERTIFICATE_FILE} \
+  -subj "${SUBJECT}"
+
 ```
 
-3. Register the certificate (public key) generated in the previous step in the [API-Hub portal](https://developer.circulodecredito.com.mx/guia-de-inicio) of *Cículo de Crédito*.
-
-4. Associate the API product ***Validacion de Expediente*** with your application within the *Círculo de Crédito* API Hub portal. ([For more information consult the official documentation](https://developer.circulodecredito.com.mx/guia-de-inicio)).
-
-> This step is very important because if you don't do it you won't be able to
-> consume the API.
-
-5. Clone this repository as usual.
+- Generar contenedor PKCS12 a partir de la llave privada y el certificado
 
 ```shell
-git clone <url>
+# Genera el archivo pkcs12 a partir de la llave privada y el certificado.
+# Deberá empaquetar su llave privada y el certificado.
+
+openssl pkcs12 -name ${ALIAS} \
+  -export -out ${PKCS12_FILE} \
+  -inkey ${PRIVATE_KEY_FILE} \
+  -in ${CERTIFICATE_FILE} \
+  -password pass:${KEY_PASSWORD}
+
 ```
-6. Add in the Main class of the code your access credentials provided by *Círculo de Crédito*, as well as the productive URL of the API and the corresponding data to consume the service.
+
+- Generar un keystore dummy y eliminar su contenido.
+
+```sh
+#Genera un Keystore con un par de llaves dummy.
+keytool -genkey -alias dummy -keyalg RSA \
+    -keysize 2048 -keystore ${KEYSTORE_FILE} \
+    -dname "CN=dummy, OU=, O=, L=, S=, C=" \
+    -storepass ${KEYSTORE_PASSWORD} -keypass ${KEY_PASSWORD}
+#Elimina el par de llaves dummy.
+keytool -delete -alias dummy \
+    -keystore ${KEYSTORE_FILE} \
+    -storepass ${KEYSTORE_PASSWORD}
+```
+
+- Importar el contenedor PKCS12 al keystore
+
+```sh
+#Importamos el contenedor PKCS12
+keytool -importkeystore -srckeystore ${PKCS12_FILE} \
+  -srcstoretype PKCS12 \
+  -srcstorepass ${KEY_PASSWORD} \
+  -destkeystore ${KEYSTORE_FILE} \
+  -deststoretype JKS -storepass ${KEYSTORE_PASSWORD} \
+  -alias ${ALIAS}
+#Lista el contenido del Kesystore para verificar que
+keytool -list -keystore ${KEYSTORE_FILE} \
+  -storepass ${KEYSTORE_PASSWORD}
+```
+
+### Paso 2. Carga del certificado dentro del portal de desarrolladores
+ 1. Iniciar sesión.
+ 2. Dar clic en la sección "**Mis aplicaciones**".
+ 3. Seleccionar la aplicación.
+ 4. Ir a la pestaña de "**Certificados para @tuApp**".
+    <p align="center">
+      <img src="https://github.com/APIHub-CdC/imagenes-cdc/blob/master/applications.png">
+    </p>
+ 5. Al abrirse la ventana emergente, seleccionar el certificado previamente creado y dar clic en el botón "**Cargar**":
+    <p align="center">
+      <img src="https://github.com/APIHub-CdC/imagenes-cdc/blob/master/upload_cert.png" width="268">
+    </p>
+ 
+### Paso 3. Descarga del certificado de Círculo de Crédito dentro del portal de desarrolladores
+ 1. Iniciar sesión.
+ 2. Dar clic en la sección "**Mis aplicaciones**".
+ 3. Seleccionar la aplicación.
+ 4. Ir a la pestaña de "**Certificados para @tuApp**".
+    <p align="center">
+        <img src="https://github.com/APIHub-CdC/imagenes-cdc/blob/master/applications.png">
+    </p>
+ 5. Al abrirse la ventana emergente, dar clic al botón "**Descargar**":
+    <p align="center">
+        <img src="https://github.com/APIHub-CdC/imagenes-cdc/blob/master/download_cert.png" width="268">
+    </p>
+
+### Paso 4. Modificar archivo de configuraciones
+
+Para hacer uso del certificado que se descargó y el keystore que se creó se deberán modificar las rutas que se encuentran e
+```properties
+keystore_file=your_path_for_your_keystore/keystore.jks
+cdc_cert_file=your_path_for_certificate_of_cdc/cdc_cert.pem
+keystore_password=your_super_secure_keystore_password
+key_alias=cdc
+key_password=your_super_secure_password
+```
+### Paso 5. Modificar URL
+En el archivo ApiTest.java, que se encuentra en ***src/test/java/io/RcRenueva/client/api/***. Se deberá modificar los datos de la petición y los datos de consumo:
+
+1. Configurar ubicación y acceso de la llave creado en el **paso 1** y el certificado descargado en el **paso 2**
+   - keystoreFile: ubicacion del archivo keystore.jks
+   - cdcCertFile: ubicacion del archivo cdc_cert.pem
+   - keystorePassword: contraseña de cifrado del keystore
+   - keyAlias: alias asignado al keystore
+   - keyPassword: contraseña de cifrado del contenedor
+
+2. Credenciales de acceso dadas por Círculo de Crédito, obtenidas despues de la afiliación
+   - usernameCDC: usuario de Círculo de Crédito
+   - passwordCDC: contraseña de Círculo de Crédito
+    
+2. Datos de consumo del API
+   - url: URL de la exposicón del API
+   - xApiKey: Ubicada en la aplicación (creada en el **paso 2**) del portal y nombrada como Consumer Key 
+
+> **NOTA:** Los datos de la siguiente petición son solo representativos.
 
 ```java
-// Path location of the private-key
-Path privateKeyFilePath = Path.of("/your-path/your-private-key.pem");
+DomicilioPeticion domicilioPeticion = new DomicilioPeticion();
+domicilioPeticion.setCiudad("");
+domicilioPeticion.setDelegacionMunicipio("");
+domicilioPeticion.setCiudad("");
+domicilioPeticion.setEstado();
+domicilioPeticion.setCodigoPostal("");
+domicilioPeticion.setNumeroTelefono("");
 
-PrivateKeyHelper privateKeyHelper = new EcdsaPrivateKeyHelper(privateKeyFilePath);
-SignatureHelper signatureHelper = new EcdsaSignatureHelper(privateKeyHelper);
+List<DomicilioPeticion> domicilioPeticionList = new ArrayList<DomicilioPeticion>();
+domicilioPeticionList.add(domicilioPeticion);
 
-// Required data for HTTP request
-String url = "https://api-url";
-String apiKey = "your-x-api-key";
-String username = "your-username";
-String password = "youer-password";
+Domicilios domicilios = new Domicilios();
+domicilios.setList(domicilioPeticionList);
+
+PersonasPeticion personasPeticion = new PersonasPeticion();
+personasPeticion.setNombres("");
+personasPeticion.setApellidoPaterno("");
+personasPeticion.setApellidoMaterno("");
+personasPeticion.setFechaNacimiento("");
+personasPeticion.setRFC("");
+personasPeticion.setCURP("");
+personasPeticion.setClaveElectorIFE("");
+personasPeticion.setSexo();
+personasPeticion.setDomicilios(domicilios);
+
+List<PersonasPeticion> personasPeticionList = **new** ArrayList<PersonasPeticion>();
+personasPeticionList.add(personasPeticion);
+
+Personas personas = new Personas();
+personas.setFolio("");
+personas.setList(personasPeticionList);
+
+PersonaPeticion personaPeticion = new PersonaPeticion();
+personaPeticion.setFolioOtorgante("");
+personaPeticion.setPersonas(personas);       
 ```
+### Paso 6. Ejecutar la prueba unitaria
 
-```java
-// Create DTO objects
-DomicilioFacade domicilio = new DomicilioFacade.Builder()
-.direccion("")
-.delegacionMunicipio("")
-.ciudad("")
-.estado(Estado.DISTRITO_FEDERAL)
-.codigoPostal("")
-.numeroTelefono("")
-.build();
-
-PersonaFacade persona = new PersonaFacade.Builder()
-.nombre("")
-.apellidoPaterno("")
-.apellidoMaterno("")
-.fechaNacimiento(LocalDate.of(1980, 12, 31))
-.rfc("")
-.curp("")
-.claveElectorIfe("")
-.genero(Genero.MASCULINO)
-.addDomicilio(domicilio)
-.build();
-
-ExpedienteFacade expedienteFacade = new ExpedienteFacade.Builder()
-.folio("")
-.folioOtorgante("")
-.addPersona(persona)
-.build();
-```
-
-7. Run the code in the console using maven or run it in your favorite IDE. 
-
+Teniendo los pasos anteriores ya solo falta ejecutar la prueba unitaria, con el siguiente comando:
 ```shell
-mvn compile exec:java
+mvn test -Dmaven.install.skip=true
 ```
+---
+[CONDICIONES DE USO, REPRODUCCIÓN Y DISTRIBUCIÓN](https://github.com/APIHub-CdC/licencias-cdc)
 
-## License
-[License & Terms and Conditions](https://github.com/APIHub-CdC/licencias-cdc)
+[1]: https://getcomposer.org/doc/00-intro.md#installation-linux-unix-macos
