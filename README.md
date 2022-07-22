@@ -145,7 +145,7 @@ key_alias=cdc
 key_password=your_super_secure_password
 ```
 ### Paso 5. Modificar URL
-En el archivo ApiTest.java, que se encuentra en ***src/test/java/io/RcRenueva/client/api/***. Se deberá modificar los datos de la petición y los datos de consumo:
+En el archivo ***ApiTest.java***, que se encuentra en ***src/test/java/mx/com/cdc/apihub/ve/api***. Se deberá modificar los datos de la petición y los datos de consumo:
 
 1. Configurar ubicación y acceso de la llave creado en el **paso 1** y el certificado descargado en el **paso 2**
    - keystoreFile: ubicacion del archivo keystore.jks
@@ -165,41 +165,88 @@ En el archivo ApiTest.java, que se encuentra en ***src/test/java/io/RcRenueva/cl
 > **NOTA:** Los datos de la siguiente petición son solo representativos.
 
 ```java
-DomicilioPeticion domicilioPeticion = new DomicilioPeticion();
-domicilioPeticion.setCiudad("");
-domicilioPeticion.setDelegacionMunicipio("");
-domicilioPeticion.setCiudad("");
-domicilioPeticion.setEstado();
-domicilioPeticion.setCodigoPostal("");
-domicilioPeticion.setNumeroTelefono("");
+package mx.com.cdc.apihub.ve.api;
+...
+public class ApiTest {
+private final ApiVerificacionExpediente api = new ApiVerificacionExpediente();
 
-List<DomicilioPeticion> domicilioPeticionList = new ArrayList<DomicilioPeticion>();
-domicilioPeticionList.add(domicilioPeticion);
+private ApiClient apiClient;
 
-Domicilios domicilios = new Domicilios();
-domicilios.setList(domicilioPeticionList);
+private String url                 = "cdc-api-url";
+private String xApiKey             = "your-x-api-key";
+private String username            = "your-username";
+private String password            = "your-password";
+private String keystoreFile        = "path-of-your-key-store-file";
+private String cdcCertFile         = "path-of-CdC-cert-file";
+private String keystorePassword    = "your-keystore-password";
+private String keyAlias            = "your-key-alias";
+private String keyPassword         = "your-key-password";
 
-PersonasPeticion personasPeticion = new PersonasPeticion();
-personasPeticion.setNombres("");
-personasPeticion.setApellidoPaterno("");
-personasPeticion.setApellidoMaterno("");
-personasPeticion.setFechaNacimiento("");
-personasPeticion.setRFC("");
-personasPeticion.setCURP("");
-personasPeticion.setClaveElectorIFE("");
-personasPeticion.setSexo();
-personasPeticion.setDomicilios(domicilios);
+@Before()
+public void setUp() {
+    this.apiClient = api.getApiClient();
+    this.apiClient.setBasePath(url);
+  
+    OkHttpClient okHttpClient = new OkHttpClient()
+    .newBuilder()
+    .readTimeout(30, TimeUnit.SECONDS)
+    .addInterceptor(new SignerInterceptor(
+        keystoreFile,
+        cdcCertFile,
+        keystorePassword,
+        keyAlias,
+        keyPassword))
+    .build();
+    apiClient.setHttpClient(okHttpClient);
+} 
 
-List<PersonasPeticion> personasPeticionList = **new** ArrayList<PersonasPeticion>();
-personasPeticionList.add(personasPeticion);
+@Test
+public void getReporteTest() throws Exception {
 
-Personas personas = new Personas();
-personas.setFolio("");
-personas.setList(personasPeticionList);
+    DomicilioPeticion domicilioPeticion = new DomicilioPeticion();
+    domicilioPeticion.setCiudad("");
+    domicilioPeticion.setDelegacionMunicipio("");
+    domicilioPeticion.setCiudad("");
+    domicilioPeticion.setEstado(CatalogoEstados.**_DF_**);
+    domicilioPeticion.setCodigoPostal("");
+    domicilioPeticion.setNumeroTelefono("");
 
-PersonaPeticion personaPeticion = new PersonaPeticion();
-personaPeticion.setFolioOtorgante("");
-personaPeticion.setPersonas(personas);       
+    List<DomicilioPeticion> domicilioPeticionList = 
+        new ArrayList<DomicilioPeticion>();
+    domicilioPeticionList.add(domicilioPeticion);
+
+    Domicilios domicilios = new Domicilios();
+    domicilios.setList(domicilioPeticionList);
+
+    PersonasPeticion personasPeticion = new PersonasPeticion();
+    personasPeticion.setNombres("");
+    personasPeticion.setApellidoPaterno("");
+    personasPeticion.setApellidoMaterno("");
+    personasPeticion.setFechaNacimiento("");
+    personasPeticion.setRFC("");
+    personasPeticion.setCURP("");
+    personasPeticion.setClaveElectorIFE("");
+    personasPeticion.setSexo(CatalogoSexo.M);
+    personasPeticion.setDomicilios(domicilios);
+
+     List<PersonasPeticion> personasPeticionList = 
+         new ArrayList<PersonasPeticion>();
+     personasPeticionList.add(personasPeticion);
+
+    Personas personas = new Personas();
+    personas.setFolio("");
+
+    personas.setList(personasPeticionList);
+
+    PersonaPeticion personaPeticion = new PersonaPeticion();
+    personaPeticion.setFolioOtorgante("");
+    personaPeticion.setPersonas(personas);
+
+    Respuesta respuesta = api.getReporte(xApiKey, username, password, personaPeticion);
+
+    Assert._assertTrue_(respuesta.getPersonas().getFolio() != null);
+}
+}      
 ```
 ### Paso 6. Ejecutar la prueba unitaria
 
